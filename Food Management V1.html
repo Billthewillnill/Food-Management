@@ -1,0 +1,2579 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Food Management System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* Hide scrollbar for Chrome, Safari and Opera while keeping scroll functionality */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    /* Hide scrollbar for IE, Edge and Firefox */
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 overflow-x-hidden">
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 transition-colors duration-200">
+    <div class="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 min-h-16 py-2 flex items-center justify-between gap-2 relative">
+      
+      <!-- Left spacer to keep center group balanced on desktop -->
+      <div class="w-9 hidden md:block shrink-0"></div>
+
+      <!-- Centered Controls: Purple "+", Tabs, Green "+", Undo/Redo/(Copy/Paste in Data tab), and Scrollable Dynamic Meta Data Buttons -->
+      <div class="flex items-center justify-center gap-2 mx-auto min-w-0 flex-1 max-w-full">
+        
+        <!-- Core Fixed Controls (Never scrolled out of view) -->
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <!-- Purple "+" Button (Shown on Left when in Text Data tab) -->
+          <button
+            id="btn-plus-data"
+            onclick="openMetaFoodModal()"
+            title="Add New Food to Meta Data Catalog"
+            class="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white shadow-sm hover:shadow-purple-500/20 hover:shadow-lg transition-all shrink-0"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+
+          <!-- Main Navigation Tabs -->
+          <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700/60 shrink-0">
+            <!-- Left Tab: Text Data -->
+            <button
+              id="tab-data"
+              onclick="switchTab('data')"
+              title="Press Tab to toggle views"
+              class="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-sm whitespace-nowrap"
+            >
+              Text Data
+            </button>
+            <!-- Right Tab: Inventory / Shopping List -->
+            <button
+              id="tab-visual"
+              onclick="switchTab('visual')"
+              title="Press Tab to toggle views"
+              class="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 whitespace-nowrap"
+            >
+              Inventory / Shopping List
+            </button>
+          </div>
+
+          <!-- Green "+" Button (Shown on Right when in Inventory / Shopping List tab; Click or Drag onto a category) -->
+          <button
+            id="btn-plus-visual"
+            onmousedown="startGreenPlusDrag(event)"
+            ontouchstart="startGreenPlusDrag(event)"
+            title="Click or drag onto a category below to add food"
+            style="touch-action: none;"
+            class="hidden flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white shadow-sm hover:shadow-emerald-500/20 hover:shadow-lg transition-all cursor-grab active:cursor-grabbing select-none touch-none shrink-0"
+          >
+            <svg class="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+
+          <!-- Undo / Redo Controls -->
+          <div class="flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm shrink-0">
+            <button
+              id="btn-undo"
+              onclick="performUndo()"
+              title="Undo (Ctrl+Z)"
+              disabled
+              class="p-1.5 sm:p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-35 disabled:pointer-events-none transition-all"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2M3 10l4-4m-4 4l4 4" />
+              </svg>
+            </button>
+            <button
+              id="btn-redo"
+              onclick="performRedo()"
+              title="Redo (Ctrl+Y / Ctrl+Shift+Z)"
+              disabled
+              class="p-1.5 sm:p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-35 disabled:pointer-events-none transition-all"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10H11a5 5 0 00-5 5v2m15-7l-4-4m4 4l-4 4" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Meta Data Buttons Container (Independently horizontally scrollable!) -->
+        <div
+          id="dynamic-buttons-container"
+          class="flex items-center gap-2 overflow-x-auto flex-nowrap no-scrollbar py-1 px-0.5 min-w-0 max-w-full"
+        ></div>
+      </div>
+
+      <!-- Right Side: Theme Toggle Button -->
+      <button
+        onclick="toggleTheme()"
+        title="Toggle Dark / Light Mode"
+        class="p-2 sm:p-2.5 rounded-xl bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/60 transition-colors shrink-0"
+      >
+        <!-- Sun icon (shown in dark mode) -->
+        <svg id="icon-sun" class="w-5 h-5 hidden dark:block text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        <!-- Moon icon (shown in light mode) -->
+        <svg id="icon-moon" class="w-5 h-5 block dark:hidden text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      </button>
+
+    </div>
+  </header>
+
+  <!-- Floating Tooltip for Scrollable Top Bar Buttons -->
+  <div
+    id="floating-btn-tooltip"
+    class="fixed hidden z-50 w-56 p-2.5 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs border border-slate-200 dark:border-slate-700 shadow-xl pointer-events-none text-center leading-relaxed -translate-x-1/2"
+  ></div>
+
+  <!-- Main Content Area -->
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    
+    <!-- TEXT DATA TAB VIEW -->
+    <section id="view-data" class="space-y-4">
+
+      <!-- Copy All & Paste All Toolbar (Exclusively inside Text Data tab, not in top bar) -->
+      <div class="flex items-center justify-end gap-2.5 pt-1">
+        <button
+          id="btn-copy-all"
+          type="button"
+          onclick="copyAllData()"
+          title="Copy All Text Data"
+          class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-500/70 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm transition-all shrink-0 whitespace-nowrap"
+        >
+          <svg class="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <span>Copy All</span>
+        </button>
+        <button
+          id="btn-paste-all"
+          type="button"
+          onclick="pasteAllData()"
+          title="Paste All Text Data"
+          class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-500/70 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm transition-all shrink-0 whitespace-nowrap"
+        >
+          <svg class="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          <span>Paste All</span>
+        </button>
+      </div>
+
+      <!-- Raw Text Editor -->
+      <div class="relative">
+        <textarea
+          id="raw-textarea"
+          class="w-full h-[620px] p-4 sm:p-6 font-mono text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 leading-relaxed resize-y transition-colors"
+          placeholder="Enter your food data here..."
+          spellcheck="false"
+        ></textarea>
+      </div>
+
+      <!-- Expandable Formatting Guide (At the bottom of Text Data tab) -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm transition-colors">
+        <button
+          onclick="toggleGuide()"
+          class="w-full px-5 py-3.5 text-left flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+        >
+          <div class="flex items-center gap-2.5">
+            <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span class="font-semibold text-sm text-slate-900 dark:text-slate-200">Formatting Guide</span>
+          </div>
+          <svg id="guide-chevron" class="w-5 h-5 text-slate-400 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <!-- Collapsible Content (Hidden by default) -->
+        <div id="guide-content" class="hidden border-t border-slate-200 dark:border-slate-800 px-5 py-4 text-sm space-y-4 bg-white dark:bg-slate-900/50">
+          <div>
+            <h4 class="font-semibold text-slate-900 dark:text-slate-200 mb-1">Sections &amp; Structure</h4>
+            <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+              • <strong>Main Sections:</strong> Wrap the section title (<code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Work Food</code>, <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Home Food</code>, <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Pending</code>, or <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Meta Data</code>) between two lines of <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">= = = = = =</code><br>
+              • <strong>Inventory Sub-Sections:</strong> Write <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">= = = Snacks = = =</code> or <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">= = = Meals = = =</code> under Work Food or Home Food.<br>
+              • <strong>Meta Data Sub-Sections:</strong> <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">= = = Buttons = = =</code>, <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">= = = Points = = =</code> (e.g. <code class="font-mono text-xs">Home Meals: 10pts</code>), <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">= = = Foods = = =</code>, and <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">= = = History = = =</code>.
+            </p>
+          </div>
+
+          <div class="border-t border-slate-200 dark:border-slate-800 pt-3">
+            <h4 class="font-semibold text-purple-600 dark:text-purple-400 mb-1.5">Tags</h4>
+            <p class="text-slate-600 dark:text-slate-400 leading-relaxed mb-2">
+              Separate the title and its tags using <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 font-mono text-xs"> | </code>. Structured tags go outside parentheses and are separated by commas (order does not matter). Custom tags go inside parentheses without needing a preceding comma:
+            </p>
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-xs text-slate-800 dark:text-slate-300 mb-2.5 overflow-x-auto">
+              Food Title | Points: 1.5pts, Directory: wm / hm, link: site.com, Estimated Expiration: 3yrs1d, Description: Write description here (custom tag 1, custom tag 2)
+            </div>
+            <ul class="space-y-1.5 text-slate-600 dark:text-slate-400">
+              <li>
+                • <strong>Points (Foods):</strong> <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Points: 1pt</code>, <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Points: 2pts</code>, or <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Points: 1.5pts</code> — Point value up to the nearest tenth.
+              </li>
+              <li>
+                • <strong>Directory (Foods):</strong> <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Directory: ws</code>, <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Directory: wm / hm</code>, or <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Directory: s</code> — Indicates where the food appears in the green <strong>+</strong> menu (<code class="font-mono text-xs">w</code> = Work Food, <code class="font-mono text-xs">h</code> = Home Food, <code class="font-mono text-xs">s</code> = Snacks, <code class="font-mono text-xs">m</code> = Meals).
+              </li>
+              <li>
+                • <strong>OTW (Pending Foods):</strong> <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">OTW: no</code> or <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">OTW: yes</code> — Marks whether a Pending item is already On The Way. Items with <code class="font-mono text-xs">OTW: yes</code> are hidden from the copyable shopping list.
+              </li>
+              <li>
+                • <strong>Link (Foods &amp; Buttons):</strong> <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">link: linkhere.com</code> — Included when copying Pending items (<code class="font-mono text-xs">Food: linkhere.com</code>) or clicking top-bar buttons.
+              </li>
+              <li>
+                • <strong>Estimated Expiration (Foods):</strong> <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Estimated Expiration: 3yrs1d</code> or <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">5d</code> — Displays expected shelf life in years (<code class="font-mono text-xs">yrs</code>) and/or days (<code class="font-mono text-xs">d</code>).
+              </li>
+              <li>
+                • <strong>Description (Foods):</strong> <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Description: Write description here</code> — Displays a description when hovering over the food.
+              </li>
+              <li>
+                • <strong>Custom Tags (Foods):</strong> <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">(salty, movie night)</code> — Custom descriptors inside parentheses, separated by commas.
+              </li>
+              <li>
+                • <strong>Info (Buttons):</strong> <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs">Info: info here</code> — Shows a hover dropdown tooltip on your custom top-bar button.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- INVENTORY / SHOPPING LIST TAB VIEW -->
+    <section id="view-visual" class="hidden space-y-8">
+      <div id="visualizer-container" class="space-y-8"></div>
+    </section>
+
+  </main>
+
+  <!-- PURPLE "+" MODAL: Add Food to Meta Data -> Foods -->
+  <div id="meta-food-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white">Add Food to Meta Data</h3>
+        </div>
+        <button onclick="closeMetaFoodModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Food Title -->
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+          Food Title <span class="text-rose-500">*</span>
+        </label>
+        <input
+          type="text"
+          id="modal-title"
+          oninput="updateModalPreview()"
+          placeholder="e.g. Greek Yogurt"
+          class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+        />
+        <p id="modal-error" class="text-xs text-rose-500 mt-1 hidden">Please enter a food title.</p>
+      </div>
+
+      <!-- Structured Tags: Directory, Points, Link & Expiration -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+            Directory <span class="text-slate-400 font-normal lowercase">(e.g. wm / hm, s)</span>
+          </label>
+          <input
+            type="text"
+            id="modal-dir"
+            oninput="updateModalPreview()"
+            placeholder="e.g. ws, wm / hm, s"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+            Points <span class="text-slate-400 font-normal lowercase">(e.g. 1pt, 1.5pts)</span>
+          </label>
+          <input
+            type="text"
+            id="modal-points"
+            oninput="updateModalPreview()"
+            placeholder="e.g. 1pt, 2pts, 1.5pts"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+            Link <span class="text-slate-400 font-normal lowercase">(optional)</span>
+          </label>
+          <input
+            type="text"
+            id="modal-link"
+            oninput="updateModalPreview()"
+            placeholder="e.g. example.com/item"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+            Estimated Expiration <span class="text-slate-400 font-normal lowercase">(optional)</span>
+          </label>
+          <input
+            type="text"
+            id="modal-exp"
+            oninput="updateModalPreview()"
+            placeholder="e.g. 3yrs1d or 5d"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+      </div>
+
+      <!-- Structured Tag: Description -->
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+          Description <span class="text-slate-400 font-normal lowercase">(optional)</span>
+        </label>
+        <input
+          type="text"
+          id="modal-desc"
+          oninput="updateModalPreview()"
+          placeholder="Write description here..."
+          class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+        />
+      </div>
+
+      <!-- Custom Tags (Parentheses) -->
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+          Custom Tags <span class="text-slate-400 font-normal lowercase">(comma-separated, placed inside parentheses)</span>
+        </label>
+        <input
+          type="text"
+          id="modal-custom-tags"
+          oninput="updateModalPreview()"
+          placeholder="e.g. high protein, cold, breakfast"
+          class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+        />
+      </div>
+
+      <!-- Live Formatted Line Preview -->
+      <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+        <span class="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Line Preview (Added under Meta Data &rsaquo; Foods)</span>
+        <code id="modal-line-preview" class="text-xs font-mono text-purple-600 dark:text-purple-400 break-all">Greek Yogurt</code>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex justify-end gap-2.5 pt-2">
+        <button
+          onclick="closeMetaFoodModal()"
+          class="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onclick="insertFoodIntoMetaData()"
+          class="px-5 py-2.5 rounded-xl text-sm font-semibold bg-purple-600 hover:bg-purple-500 text-white shadow-sm transition-all"
+        >
+          Add to Meta Data Foods
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- GREEN "+" MODAL: Adding Food -->
+  <div id="inventory-catalog-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+      
+      <!-- Modal Header with Modal Undo/Redo -->
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 shrink-0 gap-2">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+            <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Adding Food</h3>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Click a food box to open its link, or click <strong>+</strong> to stage for <code class="font-mono text-emerald-600 dark:text-emerald-400">Pending</code>.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-1.5 shrink-0">
+          <!-- Modal Undo / Redo Buttons -->
+          <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+            <button
+              id="btn-modal-undo"
+              onclick="modalPerformUndo()"
+              title="Undo staged change"
+              disabled
+              class="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-35 disabled:pointer-events-none transition-all"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2M3 10l4-4m-4 4l4 4" />
+              </svg>
+            </button>
+            <button
+              id="btn-modal-redo"
+              onclick="modalPerformRedo()"
+              title="Redo staged change"
+              disabled
+              class="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 disabled:opacity-35 disabled:pointer-events-none transition-all"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10H11a5 5 0 00-5 5v2m15-7l-4-4m4 4l-4 4" />
+              </svg>
+            </button>
+          </div>
+
+          <button onclick="cancelInventoryCatalogModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Target Inventory Directory Selector & Search -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0 bg-white dark:bg-slate-950/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
+        <div>
+          <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+            Main Section
+          </label>
+          <select id="catalog-target-main" onchange="onCatalogDropdownChange()" class="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="Work Food">Work Food</option>
+            <option value="Home Food">Home Food</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+            Category
+          </label>
+          <select id="catalog-target-sub" onchange="onCatalogDropdownChange()" class="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="Snacks">Snacks</option>
+            <option value="Meals">Meals</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+            Filter Foods <span id="catalog-dir-badge" class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono text-[10px]"></span>
+          </label>
+          <input
+            type="text"
+            id="catalog-search"
+            oninput="renderCatalogOverviewList()"
+            placeholder="Search matching foods..."
+            class="w-full px-3 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+      </div>
+
+      <!-- Staged Items Bar (Shows items queued to be added to Pending with little "x" buttons) -->
+      <div id="catalog-staged-container" class="hidden shrink-0 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/30 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+            Staged for Pending (<span id="catalog-staged-count">0</span>)
+          </span>
+          <span class="text-[11px] text-slate-500 dark:text-slate-400">Click × to remove before saving</span>
+        </div>
+        <div id="catalog-staged-pills" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto"></div>
+      </div>
+
+      <!-- Scrollable List of Catalog Foods -->
+      <div id="catalog-foods-list" class="overflow-y-auto space-y-2.5 pr-1 flex-1 min-h-[200px]"></div>
+
+      <!-- Footer -->
+      <div class="flex flex-wrap justify-between items-center gap-2 border-t border-slate-200 dark:border-slate-800 pt-3 shrink-0">
+        <button
+          onclick="cancelInventoryCatalogModal(); switchTab('data'); openMetaFoodModal();"
+          class="text-xs font-medium text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1"
+        >
+          + Create a new food in Meta Data
+        </button>
+        <div class="flex items-center gap-2">
+          <button
+            onclick="cancelInventoryCatalogModal()"
+            class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onclick="commitInventoryCatalogModal()"
+            class="px-5 py-2 rounded-xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CATEGORY PENDING FOODS POPUP WINDOW (Opened when clicking "(Xpts pending)") -->
+  <div id="category-pending-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div>
+          <h3 id="category-pending-modal-title" class="text-base font-bold text-slate-900 dark:text-white">Pending Foods</h3>
+          <p id="category-pending-modal-subtitle" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5"></p>
+        </div>
+        <button onclick="closeCategoryPendingModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div id="category-pending-modal-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
+      <div class="flex justify-end border-t border-slate-200 dark:border-slate-800 pt-3">
+        <button onclick="closeCategoryPendingModal()" class="px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ON THE WAY (OTW) FOODS MODAL WINDOW -->
+  <div id="otw-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 shrink-0">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+            <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Food On The Way</h3>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Click items below to select them, then choose where to send them.
+          </p>
+        </div>
+        <button onclick="closeOtwModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- List of OTW items -->
+      <div id="otw-modal-list" class="space-y-2 overflow-y-auto flex-1 pr-1 min-h-[160px]"></div>
+
+      <!-- Footer with 2 Action Buttons -->
+      <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800 pt-3 shrink-0">
+        <button
+          type="button"
+          onclick="sendSelectedOtwToNotOtw()"
+          id="btn-otw-to-pending"
+          disabled
+          class="flex-1 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 disabled:opacity-40 disabled:pointer-events-none transition-all text-center"
+        >
+          Send Back to Not On The Way
+        </button>
+        <button
+          type="button"
+          onclick="sendSelectedOtwToInventory()"
+          id="btn-otw-to-inventory"
+          disabled
+          class="flex-1 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm disabled:opacity-40 disabled:pointer-events-none transition-all text-center"
+        >
+          Send to Current Inventory
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASTE ALL FALLBACK MODAL (Used when browser blocks direct clipboard read in iframe) -->
+  <div id="paste-all-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white">Paste All Text Data</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Press <kbd class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-[11px]">Ctrl+V</kbd> / <kbd class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-[11px]">Cmd+V</kbd> below to replace all text data.</p>
+        </div>
+        <button onclick="closePasteModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <textarea
+        id="paste-modal-textarea"
+        placeholder="Paste your text data here..."
+        class="w-full h-48 p-3.5 font-mono text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
+      ></textarea>
+      <div class="flex justify-end gap-2">
+        <button onclick="closePasteModal()" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">Cancel</button>
+        <button onclick="applyPasteModal()" class="px-4 py-2 rounded-xl text-sm font-medium bg-purple-600 hover:bg-purple-500 text-white">Replace All Data</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Drag Ghost for Green "+" Button -->
+  <div id="green-plus-drag-ghost" class="fixed z-50 hidden pointer-events-none -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold shadow-2xl ring-4 ring-emerald-500/30">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+    </svg>
+    <span id="drag-ghost-label">Drop on a category</span>
+  </div>
+
+  <script>
+    const STORAGE_KEY_DATA = 'food_manager_raw_data_v4';
+    const STORAGE_KEY_THEME = 'food_manager_theme_v2';
+    const STORAGE_KEY_LAST_MAIN = 'food_manager_last_main_v1';
+    const STORAGE_KEY_LAST_SUB = 'food_manager_last_sub_v1';
+
+    // Default sample data including Pending, Meta Data > Points, Meta Data > Foods (with Points:), and Meta Data > History
+    const INITIAL_DATA = `= = = = = =
+Work Food
+= = = = = =
+
+= = = Snacks = = =
+Granola Bar
+Almonds
+
+= = = Meals = = =
+Chicken Salad
+Turkey Sandwich
+
+
+= = = = = =
+Home Food
+= = = = = =
+
+= = = Snacks = = =
+Popcorn
+Apple Slices
+
+= = = Meals = = =
+Spaghetti
+Grilled Chicken
+
+
+= = = = = =
+Pending
+= = = = = =
+Greek Yogurt | Directory: ws, OTW: no
+Apple Slices | Directory: hs, OTW: no
+
+
+= = = = = =
+Meta Data
+= = = = = =
+
+= = = Buttons = = =
+Grocery Store | Link: instacart.com, Info: Order weekly groceries online
+Recipes | Link: allrecipes.com, Info: Browse meal prep ideas and inspiration
+
+= = = Points = = =
+Work Snacks: 5pts
+Work Meals: 10pts
+Home Snacks: 6pts
+Home Meals: 10pts
+
+= = = Foods = = =
+Granola Bar | Points: 1pt, Directory: ws, link: naturevalley.com, Estimated Expiration: 1yrs15d, Description: Oats and honey bar for desk drawer (quick, crunchy, sweet)
+Almonds | Points: 1.5pts, Directory: s, link: bluediamond.com, Estimated Expiration: 2yrs, Description: Roasted salted almonds (healthy, salty, nuts)
+Chicken Salad | Points: 2pts, Directory: wm, Estimated Expiration: 3d, link: eatingwell.com, Description: Meal-prepped salad in fridge (cold, healthy, protein)
+Turkey Sandwich | Points: 2.5pts, Directory: wm / hm, Estimated Expiration: 2d, Description: Whole wheat turkey and swiss (filling, bread)
+Popcorn | Points: 1pt, Directory: hs, link: skinnydipped.com, Estimated Expiration: 180d, Description: Pantry bag for weekend movies (salty, movie night)
+Apple Slices | Points: 1pt, Directory: s, link: apple.com, Estimated Expiration: 5d, Description: Fresh Honeycrisp slices (fruit, sweet)
+Spaghetti | Points: 3pts, Directory: hm, Estimated Expiration: 4d, Description: Classic marinara pasta dinner (hot, heavy, pasta)
+Grilled Chicken | Points: 2.5pts, Directory: wm / hm, Estimated Expiration: 3d, Description: Seasoned chicken breast (protein, hot)
+Greek Yogurt | Points: 1.5pts, Directory: ws / hs, link: chobani.com, Estimated Expiration: 14d, Description: High-protein vanilla yogurt cup (breakfast, cold, protein)
+
+= = = History = = =`;
+
+    // State management
+    let activeTab = 'data';
+    const textarea = document.getElementById('raw-textarea');
+
+    // Remembered dropdown selection for Green "+" modal
+    let lastSelectedMain = localStorage.getItem(STORAGE_KEY_LAST_MAIN) || 'Work Food';
+    let lastSelectedSub = localStorage.getItem(STORAGE_KEY_LAST_SUB) || 'Snacks';
+
+    // Load saved theme from localStorage (default dark)
+    const savedTheme = localStorage.getItem(STORAGE_KEY_THEME);
+    if (savedTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+    }
+
+    // Load saved text data from localStorage (with fallback to v3 if upgrading)
+    const savedData = localStorage.getItem(STORAGE_KEY_DATA) ?? localStorage.getItem('food_manager_raw_data_v3');
+    textarea.value = savedData !== null ? savedData : INITIAL_DATA;
+
+    // -------------------------------------------------------------
+    // POINTS PARSING & FORMATTING HELPERS
+    // -------------------------------------------------------------
+    function parsePointsValue(str) {
+      if (str === null || str === undefined) return 0;
+      const match = String(str).trim().match(/([0-9]+(?:\.[0-9]+)?)/);
+      if (!match) return 0;
+      const val = parseFloat(match[1]);
+      if (isNaN(val)) return 0;
+      return Math.round(val * 10) / 10;
+    }
+
+    function formatPointsValue(num) {
+      const rounded = Math.round((Number(num) || 0) * 10) / 10;
+      const numStr = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1).replace(/\.0$/, '');
+      return rounded === 1 ? `${numStr}pt` : `${numStr}pts`;
+    }
+
+    // -------------------------------------------------------------
+    // UNDO / REDO HISTORY STACK
+    // -------------------------------------------------------------
+    const historyStack = [textarea.value];
+    let historyIndex = 0;
+    let historyDebounceTimer = null;
+
+    function updateUndoRedoButtons() {
+      const undoBtn = document.getElementById('btn-undo');
+      const redoBtn = document.getElementById('btn-redo');
+      if (undoBtn) undoBtn.disabled = historyIndex <= 0;
+      if (redoBtn) redoBtn.disabled = historyIndex >= historyStack.length - 1;
+    }
+
+    function pushHistoryState(newText) {
+      if (historyStack[historyIndex] === newText) return;
+      // Truncate any redo states ahead of current index
+      historyStack.splice(historyIndex + 1);
+      historyStack.push(newText);
+      if (historyStack.length > 100) {
+        historyStack.shift();
+      } else {
+        historyIndex++;
+      }
+      updateUndoRedoButtons();
+    }
+
+    function applyTextValue(newText, recordInHistory = true) {
+      textarea.value = newText;
+      if (recordInHistory) {
+        pushHistoryState(newText);
+      }
+      saveToLocalStorage();
+      renderAll();
+    }
+
+    function performUndo() {
+      if (historyDebounceTimer) {
+        clearTimeout(historyDebounceTimer);
+        historyDebounceTimer = null;
+        pushHistoryState(textarea.value);
+      }
+      if (historyIndex > 0) {
+        historyIndex--;
+        textarea.value = historyStack[historyIndex];
+        saveToLocalStorage();
+        renderAll();
+        updateUndoRedoButtons();
+      }
+    }
+
+    function performRedo() {
+      if (historyIndex < historyStack.length - 1) {
+        historyIndex++;
+        textarea.value = historyStack[historyIndex];
+        saveToLocalStorage();
+        renderAll();
+        updateUndoRedoButtons();
+      }
+    }
+
+    // Copy All & Paste All
+    function copyAllData() {
+      const btn = document.getElementById('btn-copy-all');
+      const labelSpan = btn.querySelector('span') || btn;
+      const originalText = labelSpan.textContent;
+      const tempArea = document.createElement('textarea');
+      tempArea.value = textarea.value;
+      tempArea.style.position = 'fixed';
+      tempArea.style.opacity = '0';
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      try {
+        document.execCommand('copy');
+        labelSpan.textContent = 'Copied!';
+        setTimeout(() => { labelSpan.textContent = originalText; }, 1400);
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+      document.body.removeChild(tempArea);
+    }
+
+    async function pasteAllData() {
+      const btn = document.getElementById('btn-paste-all');
+      const labelSpan = btn.querySelector('span') || btn;
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        try {
+          const clipText = await navigator.clipboard.readText();
+          if (typeof clipText === 'string' && clipText.length > 0) {
+            applyTextValue(clipText, true);
+            const originalText = labelSpan.textContent;
+            labelSpan.textContent = 'Pasted!';
+            setTimeout(() => { labelSpan.textContent = originalText; }, 1400);
+            return;
+          }
+        } catch (err) {
+          // Clipboard read blocked by iframe permissions; open fallback paste modal
+        }
+      }
+      const pasteModal = document.getElementById('paste-all-modal');
+      const pasteArea = document.getElementById('paste-modal-textarea');
+      pasteArea.value = '';
+      pasteModal.classList.remove('hidden');
+      setTimeout(() => pasteArea.focus(), 50);
+    }
+
+    function closePasteModal() {
+      document.getElementById('paste-all-modal').classList.add('hidden');
+    }
+
+    function applyPasteModal() {
+      const pasteArea = document.getElementById('paste-modal-textarea');
+      if (pasteArea.value.trim()) {
+        applyTextValue(pasteArea.value, true);
+      }
+      closePasteModal();
+    }
+
+    function saveToLocalStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY_DATA, textarea.value);
+      } catch (e) {
+        console.error('Failed to save to localStorage:', e);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 1. PARSER LOGIC (Foods, Buttons, Points, Pending, History)
+    // -------------------------------------------------------------
+    function parseStructuredLine(line, lineIndex = -1) {
+      const pipeIndex = line.indexOf('|');
+      if (pipeIndex === -1) {
+        return {
+          lineIndex,
+          rawLine: line.trim(),
+          title: line.trim(),
+          points: null,
+          pointsRaw: null,
+          directory: null,
+          otw: null,
+          link: null,
+          expiration: null,
+          description: null,
+          info: null,
+          otherStructuredTags: [],
+          customTags: []
+        };
+      }
+
+      const title = line.substring(0, pipeIndex).trim();
+      let tagSection = line.substring(pipeIndex + 1).trim();
+
+      let customTags = [];
+      // Extract anything inside parentheses: (salty, movie night)
+      const parenRegex = /\(([^)]*)\)/g;
+      let match;
+      while ((match = parenRegex.exec(tagSection)) !== null) {
+        const innerTags = match[1]
+          .split(',')
+          .map(t => t.trim())
+          .filter(Boolean);
+        customTags.push(...innerTags);
+      }
+
+      // Remove parentheses sections from the tag string so we can parse structured tags cleanly
+      const structuredSection = tagSection.replace(/\([^)]*\)/g, '').trim();
+
+      let points = null;
+      let pointsRaw = null;
+      let directory = null;
+      let otw = null;
+      let link = null;
+      let expiration = null;
+      let description = null;
+      let info = null;
+      let otherStructuredTags = [];
+
+      if (structuredSection) {
+        // Split by commas
+        const parts = structuredSection.split(',').map(p => p.trim()).filter(Boolean);
+        parts.forEach(part => {
+          const lower = part.toLowerCase();
+          if (lower.startsWith('points:')) {
+            pointsRaw = part.substring(7).trim();
+            points = parsePointsValue(pointsRaw);
+          } else if (lower.startsWith('directory:')) {
+            directory = part.substring(10).trim();
+          } else if (lower.startsWith('otw:')) {
+            otw = part.substring(4).trim().toLowerCase();
+          } else if (lower.startsWith('link:')) {
+            link = part.substring(5).trim();
+          } else if (lower.startsWith('estimated expiration:')) {
+            expiration = part.substring(21).trim();
+          } else if (lower.startsWith('description:')) {
+            description = part.substring(12).trim();
+          } else if (lower.startsWith('info:')) {
+            info = part.substring(5).trim();
+          } else {
+            otherStructuredTags.push(part);
+          }
+        });
+      }
+
+      return {
+        lineIndex,
+        rawLine: line.trim(),
+        title,
+        points,
+        pointsRaw,
+        directory,
+        otw,
+        link,
+        expiration,
+        description,
+        info,
+        otherStructuredTags,
+        customTags
+      };
+    }
+
+    // Helper to convert (targetMain, targetSub) into directory codes ("ws", "wm", "hs", "hm") and check if a food's Directory tag matches
+    function getDirectoryCodes(targetMain, targetSub) {
+      const mLower = (targetMain || '').toLowerCase();
+      const sLower = (targetSub || '').toLowerCase();
+      const mainCode = mLower.includes('work') ? 'w' : (mLower.includes('home') ? 'h' : (mLower[0] || ''));
+      const subCode = sLower.includes('snack') ? 's' : (sLower.includes('meal') ? 'm' : (sLower[0] || ''));
+      return { mainCode, subCode, fullCode: mainCode + subCode };
+    }
+
+    function doesDirectoryStringMatch(dirString, targetMain, targetSub) {
+      if (!dirString || !dirString.trim()) return false;
+      const { mainCode, subCode, fullCode } = getDirectoryCodes(targetMain, targetSub);
+      const tokens = dirString
+        .toLowerCase()
+        .split('/')
+        .map(t => t.trim())
+        .filter(Boolean);
+
+      return tokens.some(token => {
+        if (token === fullCode) return true; // e.g., "ws", "wm", "hs", "hm"
+        if (token === subCode) return true;  // e.g., "s" (all snacks) or "m" (all meals)
+        if (token === mainCode) return true; // e.g., "w" (all work food) or "h" (all home food)
+        return false;
+      });
+    }
+
+    function doesFoodMatchDirectory(item, targetMain, targetSub) {
+      return doesDirectoryStringMatch(item.directory, targetMain, targetSub);
+    }
+
+    function parseRawText(text) {
+      const lines = text.split('\n');
+      const data = {};
+      let currentMain = null;
+      let currentSub = null;
+
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i].trim();
+
+        if (!line) {
+          i++;
+          continue;
+        }
+
+        // Main Section Check: = = = = = = (newline) Name (newline) = = = = = =
+        if (line === '= = = = = =') {
+          const nextLine = (lines[i + 1] || '').trim();
+          const nextNextLine = (lines[i + 2] || '').trim();
+
+          if (nextLine && nextNextLine === '= = = = = =') {
+            currentMain = nextLine;
+            if (!data[currentMain]) {
+              data[currentMain] = {};
+            }
+            currentSub = null;
+            i += 3;
+            continue;
+          }
+        }
+
+        // Sub-Section Check: = = = SubName = = =
+        if (line.startsWith('= = =') && line.endsWith('= = =') && line !== '= = = = = =') {
+          const subName = line.replace(/=/g, '').trim();
+          currentSub = subName;
+
+          if (currentMain) {
+            if (!data[currentMain][currentSub]) {
+              data[currentMain][currentSub] = [];
+            }
+          }
+          i++;
+          continue;
+        }
+
+        // Standard Line inside a Sub-Section or directly under a Main Section (like Pending)
+        if (currentMain) {
+          const subKey = currentSub || '_direct';
+          if (!data[currentMain][subKey]) {
+            data[currentMain][subKey] = [];
+          }
+          data[currentMain][subKey].push(parseStructuredLine(line, i));
+        }
+
+        i++;
+      }
+
+      return data;
+    }
+
+    // Helper to extract Meta Data subsections (Buttons, Foods, Points, History)
+    function getMetaDataSection(parsedData) {
+      const metaKey = Object.keys(parsedData).find(k => k.toLowerCase() === 'meta data');
+      if (!metaKey) return { buttons: [], foods: [], pointsTargets: {}, history: [] };
+      const subMap = parsedData[metaKey] || {};
+      const buttonsKey = Object.keys(subMap).find(k => k.toLowerCase() === 'buttons');
+      const foodsKey = Object.keys(subMap).find(k => k.toLowerCase() === 'foods');
+      const pointsKey = Object.keys(subMap).find(k => k.toLowerCase() === 'points');
+      const historyKey = Object.keys(subMap).find(k => k.toLowerCase() === 'history');
+
+      const pointsTargets = {
+        ws: 0,
+        wm: 0,
+        hs: 0,
+        hm: 0
+      };
+
+      if (pointsKey && Array.isArray(subMap[pointsKey])) {
+        subMap[pointsKey].forEach(item => {
+          const raw = item.rawLine || '';
+          const colonIdx = raw.indexOf(':');
+          if (colonIdx !== -1) {
+            const label = raw.substring(0, colonIdx).trim().toLowerCase();
+            const valStr = raw.substring(colonIdx + 1).trim();
+            const val = parsePointsValue(valStr);
+            if (label === 'work snacks') pointsTargets.ws = val;
+            else if (label === 'work meals') pointsTargets.wm = val;
+            else if (label === 'home snacks') pointsTargets.hs = val;
+            else if (label === 'home meals') pointsTargets.hm = val;
+          }
+        });
+      }
+
+      return {
+        buttons: buttonsKey ? subMap[buttonsKey] : [],
+        foods: foodsKey ? subMap[foodsKey] : [],
+        pointsTargets,
+        history: historyKey ? subMap[historyKey] : []
+      };
+    }
+
+    // Helper to get all items from Pending section
+    function getPendingItems(parsedData) {
+      const pendingKey = Object.keys(parsedData).find(k => k.toLowerCase() === 'pending');
+      if (!pendingKey) return [];
+      const subMap = parsedData[pendingKey] || {};
+      const all = [];
+      Object.entries(subMap).forEach(([subName, items]) => {
+        items.forEach(item => {
+          all.push({ ...item, pendingSubSection: subName });
+        });
+      });
+      return all;
+    }
+
+    // Enrich an inventory or pending item with its Meta Data > Foods catalog properties
+    function enrichItemWithCatalog(rawItem, catalogLookup) {
+      const fallback = catalogLookup[(rawItem.title || '').toLowerCase()] || {};
+      const resolvedPoints = rawItem.points !== null && rawItem.points !== undefined
+        ? rawItem.points
+        : (fallback.points !== null && fallback.points !== undefined ? fallback.points : 0);
+      return {
+        lineIndex: rawItem.lineIndex,
+        rawLine: rawItem.rawLine,
+        title: rawItem.title,
+        points: resolvedPoints,
+        pointsRaw: rawItem.pointsRaw || fallback.pointsRaw || (resolvedPoints ? formatPointsValue(resolvedPoints) : null),
+        directory: rawItem.directory || fallback.directory || null,
+        otw: rawItem.otw || null,
+        link: rawItem.link || fallback.link || null,
+        expiration: rawItem.expiration || fallback.expiration || null,
+        description: rawItem.description || fallback.description || null,
+        otherStructuredTags: rawItem.otherStructuredTags && rawItem.otherStructuredTags.length ? rawItem.otherStructuredTags : (fallback.otherStructuredTags || []),
+        customTags: rawItem.customTags && rawItem.customTags.length ? rawItem.customTags : (fallback.customTags || [])
+      };
+    }
+
+    // -------------------------------------------------------------
+    // 2. RENDERING: DYNAMIC TOP BUTTONS & INVENTORY VISUALIZER
+    // -------------------------------------------------------------
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatUrl(url) {
+      if (!url) return null;
+      if (/^https?:\/\//i.test(url)) return url;
+      return 'https://' + url;
+    }
+
+    function showButtonTooltip(el, infoText) {
+      if (!infoText) return;
+      const tooltip = document.getElementById('floating-btn-tooltip');
+      tooltip.textContent = infoText;
+      tooltip.classList.remove('hidden');
+      const rect = el.getBoundingClientRect();
+      const left = Math.min(Math.max(rect.left + rect.width / 2, 120), window.innerWidth - 120);
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = (rect.bottom + 8) + 'px';
+    }
+
+    function hideButtonTooltip() {
+      const tooltip = document.getElementById('floating-btn-tooltip');
+      if (tooltip) tooltip.classList.add('hidden');
+    }
+
+    function renderDynamicButtons(parsedData) {
+      const container = document.getElementById('dynamic-buttons-container');
+      const { buttons } = getMetaDataSection(parsedData);
+
+      if (!buttons || buttons.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      container.innerHTML = buttons.map(btn => {
+        const href = formatUrl(btn.link);
+        const Tag = href ? 'a' : 'button';
+        const linkAttrs = href ? `href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"` : '';
+        const infoAttr = btn.info ? `data-info="${escapeHtml(btn.info)}" onmouseenter="showButtonTooltip(this, this.getAttribute('data-info'))" onmouseleave="hideButtonTooltip()"` : '';
+
+        return `
+          <div class="shrink-0">
+            <${Tag}
+              ${linkAttrs}
+              ${infoAttr}
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400 shadow-sm transition-all cursor-pointer whitespace-nowrap"
+            >
+              <span>${escapeHtml(btn.title)}</span>
+              ${href ? `
+                <svg class="w-3.5 h-3.5 opacity-70 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              ` : ''}
+            </${Tag}>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderFoodHoverPopover(item) {
+      const hasDetails = item.description || item.expiration || item.directory || item.link || item.pointsRaw || item.otherStructuredTags.length > 0 || item.customTags.length > 0;
+      return `
+        <div class="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-150 absolute left-0 bottom-full mb-2 w-72 p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl z-40 pointer-events-none space-y-2">
+          <div class="flex items-start justify-between gap-2">
+            <h4 class="font-semibold text-sm text-slate-900 dark:text-white">${escapeHtml(item.title)}</h4>
+            <div class="flex items-center gap-1 shrink-0">
+              ${item.points ? `
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  ${escapeHtml(formatPointsValue(item.points))}
+                </span>
+              ` : ''}
+              ${item.directory ? `
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                  Dir: ${escapeHtml(item.directory)}
+                </span>
+              ` : ''}
+            </div>
+          </div>
+
+          ${item.description ? `
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              ${escapeHtml(item.description)}
+            </p>
+          ` : ''}
+
+          ${(item.expiration || item.link || item.otherStructuredTags.length > 0) ? `
+            <div class="flex flex-wrap gap-1.5 pt-0.5">
+              ${item.expiration ? `
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-white dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800/50">
+                  Exp: ${escapeHtml(item.expiration)}
+                </span>
+              ` : ''}
+              ${item.link ? `
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-white dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50">
+                  ${escapeHtml(item.link)}
+                </span>
+              ` : ''}
+              ${item.otherStructuredTags.map(t => `
+                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-white dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-800/50">
+                  ${escapeHtml(t)}
+                </span>
+              `).join('')}
+            </div>
+          ` : ''}
+
+          ${item.customTags.length > 0 ? `
+            <div class="flex flex-wrap gap-1 pt-0.5">
+              ${item.customTags.map(tag => `
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-white dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/50">
+                  ${escapeHtml(tag)}
+                </span>
+              `).join('')}
+            </div>
+          ` : ''}
+
+          ${!hasDetails ? `
+            <p class="text-[11px] text-slate-400 italic">Click item to remove and log to History.</p>
+          ` : `
+            <p class="text-[10px] text-slate-400 dark:text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-700/60">Click item to remove &amp; log to History</p>
+          `}
+        </div>
+      `;
+    }
+
+    function renderVisualizer(parsedData) {
+      const container = document.getElementById('visualizer-container');
+
+      // Build lookup map of foods from Meta Data -> Foods
+      const { foods: catalogFoods, pointsTargets } = getMetaDataSection(parsedData);
+      const catalogLookup = {};
+      catalogFoods.forEach(f => {
+        catalogLookup[f.title.toLowerCase()] = f;
+      });
+
+      const allPendingRaw = getPendingItems(parsedData);
+      const allPendingEnriched = allPendingRaw.map(p => enrichItemWithCatalog(p, catalogLookup));
+
+      // Filter out "Meta Data" and "Pending" from the top inventory cards ("Pending" renders in its own section at the bottom)
+      const inventoryMainSections = Object.keys(parsedData).filter(
+        k => k.toLowerCase() !== 'meta data' && k.toLowerCase() !== 'pending'
+      );
+
+      let html = '';
+
+      if (inventoryMainSections.length === 0) {
+        html += `
+          <div class="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <p class="text-slate-400">No inventory sections found. Add Work Food or Home Food in the Text Data tab!</p>
+          </div>
+        `;
+      }
+
+      inventoryMainSections.forEach(mainSection => {
+        const subSections = parsedData[mainSection];
+        html += `
+          <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+            <!-- Main Section Header -->
+            <div class="bg-white dark:bg-slate-800/80 px-6 py-4 rounded-t-2xl border-b border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+              <h2 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">${escapeHtml(mainSection)}</h2>
+            </div>
+
+            <!-- Sub-Sections -->
+            <div class="p-6 space-y-6">
+        `;
+
+        const subKeys = Object.keys(subSections).filter(k => k !== '_direct');
+        if (subKeys.length === 0) {
+          html += `<p class="text-sm text-slate-400 italic">No sub-sections found.</p>`;
+        } else {
+          subKeys.forEach(subSection => {
+            const rawItems = subSections[subSection] || [];
+            const enrichedItems = rawItems.map(item => enrichItemWithCatalog(item, catalogLookup));
+            const { fullCode } = getDirectoryCodes(mainSection, subSection);
+
+            // Calculate current inventory points in this category
+            const currentInvPoints = enrichedItems.reduce((acc, item) => acc + (item.points || 0), 0);
+
+            // Find pending items matching this category (Work Snacks, Work Meals, Home Snacks, Home Meals)
+            const matchingPending = allPendingEnriched.filter(pItem =>
+              doesDirectoryStringMatch(pItem.directory, mainSection, subSection)
+            );
+            const pendingPoints = matchingPending.reduce((acc, item) => acc + (item.points || 0), 0);
+
+            // As requested: Pending points are already added to the left value in "66pts / 10pts (65pts pending)"
+            const totalWithPending = Math.round((currentInvPoints + pendingPoints) * 10) / 10;
+            const targetPoints = pointsTargets[fullCode] !== undefined ? pointsTargets[fullCode] : 0;
+
+            html += `
+              <div
+                data-drop-main="${escapeHtml(mainSection)}"
+                data-drop-sub="${escapeHtml(subSection)}"
+                class="drop-category-zone rounded-xl p-3 -mx-3 transition-all border-2 border-transparent"
+              >
+                <div class="border-b border-slate-200 dark:border-slate-800 pb-2 mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200">
+                      ${escapeHtml(subSection)}
+                    </h3>
+                    <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                      ${escapeHtml(formatPointsValue(totalWithPending))} / ${escapeHtml(formatPointsValue(targetPoints))}
+                    </span>
+                    <button
+                      type="button"
+                      onclick="openCategoryPendingModal('${escapeHtml(mainSection)}', '${escapeHtml(subSection)}')"
+                      class="text-xs font-medium px-2 py-0.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 transition-colors cursor-pointer"
+                      title="Click to view pending foods for ${escapeHtml(mainSection)} › ${escapeHtml(subSection)}"
+                    >
+                      (${escapeHtml(formatPointsValue(pendingPoints))} pending)
+                    </button>
+                  </div>
+                  <span class="text-[11px] font-mono text-slate-400 dark:text-slate-500 uppercase">${escapeHtml(fullCode)}</span>
+                </div>
+            `;
+
+            if (enrichedItems.length === 0) {
+              html += `<p class="text-sm text-slate-400 dark:text-slate-500 italic">No items in this category yet. Drag the green + here to add food.</p>`;
+            } else {
+              html += `<div class="flex flex-wrap gap-2.5">`;
+
+              enrichedItems.forEach(item => {
+                const href = formatUrl(item.link);
+                html += `
+                  <div class="relative group inline-flex items-center">
+                    <button
+                      type="button"
+                      onclick="removeItemAndLogHistory(${item.lineIndex}, '${escapeHtml(item.title.replace(/'/g, "\\'"))}')"
+                      class="inline-flex items-center gap-2 bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 hover:border-rose-400 dark:hover:border-rose-500/70 hover:bg-rose-50/40 dark:hover:bg-rose-950/20 rounded-xl px-3.5 py-2 text-sm font-medium text-slate-900 dark:text-slate-100 transition-all shadow-sm cursor-pointer"
+                    >
+                      <span>${escapeHtml(item.title)}</span>
+                      ${href ? `
+                        <a
+                          href="${escapeHtml(href)}"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onclick="event.stopPropagation();"
+                          title="Open link in new tab"
+                          class="p-0.5 rounded hover:bg-blue-500/10 text-blue-500 dark:text-blue-400 opacity-75 hover:opacity-100"
+                        >
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                      ` : ''}
+                    </button>
+                    ${renderFoodHoverPopover(item)}
+                  </div>
+                `;
+              });
+
+              html += `</div>`;
+            }
+
+            html += `</div>`;
+          });
+        }
+
+        html += `
+            </div>
+          </div>
+        `;
+      });
+
+      // -------------------------------------------------------------
+      // PENDING SECTION AT THE BOTTOM OF INVENTORY / SHOPPING LIST TAB
+      // -------------------------------------------------------------
+      // Filter Pending items to only those NOT marked "OTW: yes" for copying & display in the shopping list
+      const copyablePending = allPendingEnriched.filter(item => (item.otw || 'no') !== 'yes');
+      const otwPendingCount = allPendingEnriched.length - copyablePending.length;
+
+      html += `
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+          <div class="bg-white dark:bg-slate-800/80 px-6 py-4 rounded-t-2xl border-b border-slate-200 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+              <h2 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Pending</h2>
+              <span class="text-xs font-normal text-slate-400 dark:text-slate-400">
+                (${copyablePending.length} to copy)
+              </span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <!-- Clipboard Button (Copies non-OTW pending items formatted as "Title: link.com") -->
+              <button
+                id="btn-copy-pending"
+                type="button"
+                onclick="copyPendingList()"
+                title="Copy Pending Shopping List (Food: link.com)"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-all"
+              >
+                <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+                <span id="btn-copy-pending-label">Copy List</span>
+              </button>
+
+              <!-- On The Way Button (Sets OTW: yes on all currently copyable pending items) -->
+              <button
+                type="button"
+                onclick="markPendingOnTheWay()"
+                title="Mark listed Pending items as OTW: yes so they no longer show to be copied"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 shadow-sm transition-all"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>On The Way</span>
+              </button>
+
+              <!-- View On The Way Window Button -->
+              <button
+                type="button"
+                onclick="openOtwModal()"
+                title="Open window to view and manage foods that are On The Way"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 transition-all"
+              >
+                <span>View On The Way (${otwPendingCount})</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="p-6">
+            ${copyablePending.length === 0 ? `
+              <p class="text-sm text-slate-400 dark:text-slate-500 italic">
+                No pending items waiting to be copied${otwPendingCount > 0 ? ` (${otwPendingCount} item${otwPendingCount === 1 ? ' is' : 's are'} marked OTW: yes)` : ''}. Use the green + button to add foods to Pending!
+              </p>
+            ` : `
+              <div class="flex flex-wrap gap-2.5">
+                ${copyablePending.map(item => {
+                  const href = formatUrl(item.link);
+                  return `
+                    <div class="relative group inline-flex items-center">
+                      <button
+                        type="button"
+                        onclick="removeItemAndLogHistory(${item.lineIndex}, '${escapeHtml(item.title.replace(/'/g, "\\'"))}')"
+                        class="inline-flex items-center gap-2 bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 hover:border-rose-400 dark:hover:border-rose-500/70 hover:bg-rose-50/40 dark:hover:bg-rose-950/20 rounded-xl px-3.5 py-2 text-sm font-medium text-slate-900 dark:text-slate-100 transition-all shadow-sm cursor-pointer"
+                      >
+                        <span>${escapeHtml(item.title)}</span>
+                        ${item.link ? `
+                          <span class="text-xs text-slate-400 dark:text-slate-500 font-mono">(${escapeHtml(item.link)})</span>
+                        ` : ''}
+                        ${href ? `
+                          <a
+                            href="${escapeHtml(href)}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onclick="event.stopPropagation();"
+                            title="Open link in new tab"
+                            class="p-0.5 rounded hover:bg-blue-500/10 text-blue-500 dark:text-blue-400 opacity-75 hover:opacity-100"
+                          >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
+                        ` : ''}
+                      </button>
+                      ${renderFoodHoverPopover(item)}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function renderAll() {
+      const parsedData = parseRawText(textarea.value);
+      renderDynamicButtons(parsedData);
+      renderVisualizer(parsedData);
+    }
+
+    textarea.addEventListener('input', () => {
+      saveToLocalStorage();
+      renderAll();
+      if (historyDebounceTimer) clearTimeout(historyDebounceTimer);
+      historyDebounceTimer = setTimeout(() => {
+        pushHistoryState(textarea.value);
+        historyDebounceTimer = null;
+      }, 300);
+    });
+
+    // -------------------------------------------------------------
+    // 3. HELPERS: INSERT LINES, REMOVE ITEM & LOG HISTORY, PENDING ACTIONS
+    // -------------------------------------------------------------
+    function insertLineIntoMainSectionDirect(targetMain, newLine) {
+      const lines = textarea.value.split('\n');
+      let mainFound = false;
+      let insertIdx = -1;
+
+      let i = 0;
+      while (i < lines.length) {
+        const trimmed = lines[i].trim();
+        if (trimmed === '= = = = = =') {
+          const nextLine = (lines[i + 1] || '').trim();
+          const nextNextLine = (lines[i + 2] || '').trim();
+          if (nextLine && nextNextLine === '= = = = = =') {
+            if (mainFound) {
+              break;
+            }
+            if (nextLine.toLowerCase() === targetMain.toLowerCase()) {
+              mainFound = true;
+              insertIdx = i + 3;
+              let j = i + 3;
+              while (j < lines.length) {
+                const t = lines[j].trim();
+                if (t === '= = = = = =') break;
+                if (t !== '') insertIdx = j + 1;
+                j++;
+              }
+              break;
+            }
+            i += 3;
+            continue;
+          }
+        }
+        i++;
+      }
+
+      if (mainFound && insertIdx !== -1) {
+        lines.splice(insertIdx, 0, newLine);
+        textarea.value = lines.join('\n');
+      } else {
+        const suffix = `\n\n= = = = = =\n${targetMain}\n= = = = = =\n${newLine}`;
+        textarea.value = textarea.value.trimEnd() + suffix;
+      }
+    }
+
+    function insertLineIntoSection(targetMain, targetSub, newLine, skipHistoryPush = false) {
+      if (!targetSub || targetSub === '_direct') {
+        insertLineIntoMainSectionDirect(targetMain, newLine);
+        if (!skipHistoryPush) {
+          pushHistoryState(textarea.value);
+          saveToLocalStorage();
+          renderAll();
+        }
+        return;
+      }
+
+      const lines = textarea.value.split('\n');
+      let currentMain = null;
+      let mainFound = false;
+      let mainEndLine = lines.length;
+      let subInsertLine = -1;
+
+      let i = 0;
+      while (i < lines.length) {
+        const trimmed = lines[i].trim();
+
+        // Check for Main Section header
+        if (trimmed === '= = = = = =') {
+          const nextLine = (lines[i + 1] || '').trim();
+          const nextNextLine = (lines[i + 2] || '').trim();
+
+          if (nextLine && nextNextLine === '= = = = = =') {
+            if (currentMain && currentMain.toLowerCase() === targetMain.toLowerCase() && mainFound) {
+              mainEndLine = i;
+              break;
+            }
+            currentMain = nextLine;
+            if (currentMain.toLowerCase() === targetMain.toLowerCase()) {
+              mainFound = true;
+            }
+            i += 3;
+            continue;
+          }
+        }
+
+        // Inside target Main Section, look for target Sub-Section
+        if (mainFound && currentMain && currentMain.toLowerCase() === targetMain.toLowerCase()) {
+          if (trimmed.startsWith('= = =') && trimmed.endsWith('= = =') && trimmed !== '= = = = = =') {
+            const subName = trimmed.replace(/=/g, '').trim();
+            if (subName.toLowerCase() === targetSub.toLowerCase()) {
+              let j = i + 1;
+              let lastItemIdx = i;
+              while (j < lines.length) {
+                const t = lines[j].trim();
+                if (t === '= = = = = =' || (t.startsWith('= = =') && t.endsWith('= = ='))) {
+                  break;
+                }
+                if (t !== '') {
+                  lastItemIdx = j;
+                }
+                j++;
+              }
+              subInsertLine = lastItemIdx + 1;
+              break;
+            }
+          }
+        }
+
+        i++;
+      }
+
+      if (subInsertLine !== -1) {
+        lines.splice(subInsertLine, 0, newLine);
+        textarea.value = lines.join('\n');
+      } else if (mainFound) {
+        const block = [`= = = ${targetSub} = = =`, newLine, ''];
+        lines.splice(mainEndLine, 0, ...block);
+        textarea.value = lines.join('\n');
+      } else {
+        const suffix = `\n\n= = = = = =\n${targetMain}\n= = = = = =\n\n= = = ${targetSub} = = =\n${newLine}`;
+        textarea.value = textarea.value.trimEnd() + suffix;
+      }
+
+      if (!skipHistoryPush) {
+        pushHistoryState(textarea.value);
+        saveToLocalStorage();
+        renderAll();
+      }
+    }
+
+    // Remove clicked item on Visualization tab and log "Food | M.D.YYYY" to Meta Data > History
+    function removeItemAndLogHistory(lineIndex, foodTitle) {
+      if (lineIndex === undefined || lineIndex < 0) return;
+      const lines = textarea.value.split('\n');
+      if (lineIndex >= lines.length) return;
+
+      // Remove the clicked line
+      lines.splice(lineIndex, 1);
+      textarea.value = lines.join('\n');
+
+      // Format current date as M.D.YYYY (e.g., 11.7.2026)
+      const now = new Date();
+      const dateStr = `${now.getMonth() + 1}.${now.getDate()}.${now.getFullYear()}`;
+      const historyLine = `${foodTitle} | ${dateStr}`;
+
+      insertLineIntoSection('Meta Data', 'History', historyLine, true);
+
+      pushHistoryState(textarea.value);
+      saveToLocalStorage();
+      renderAll();
+
+      // If Category Pending modal is open, refresh it too
+      if (!document.getElementById('category-pending-modal').classList.contains('hidden') && window._currentPendingModalContext) {
+        openCategoryPendingModal(window._currentPendingModalContext.main, window._currentPendingModalContext.sub);
+      }
+    }
+
+    // Copy non-OTW Pending items formatted as "Food: link.com" (or "Food" if no link)
+    function copyPendingList() {
+      const parsedData = parseRawText(textarea.value);
+      const { foods: catalogFoods } = getMetaDataSection(parsedData);
+      const catalogLookup = {};
+      catalogFoods.forEach(f => {
+        catalogLookup[f.title.toLowerCase()] = f;
+      });
+
+      const allPending = getPendingItems(parsedData).map(p => enrichItemWithCatalog(p, catalogLookup));
+      const copyable = allPending.filter(item => (item.otw || 'no') !== 'yes');
+
+      const textToCopy = copyable
+        .map(item => (item.link ? `${item.title}: ${item.link}` : item.title))
+        .join('\n');
+
+      const tempArea = document.createElement('textarea');
+      tempArea.value = textToCopy;
+      tempArea.style.position = 'fixed';
+      tempArea.style.opacity = '0';
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      try {
+        document.execCommand('copy');
+        const label = document.getElementById('btn-copy-pending-label');
+        if (label) {
+          label.textContent = copyable.length > 0 ? 'Copied!' : 'Nothing to Copy';
+          setTimeout(() => {
+            const el = document.getElementById('btn-copy-pending-label');
+            if (el) el.textContent = 'Copy List';
+          }, 1500);
+        }
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+      document.body.removeChild(tempArea);
+    }
+
+    // Toggle OTW tag to "yes" on all currently non-OTW items in Pending
+    function markPendingOnTheWay() {
+      const parsedData = parseRawText(textarea.value);
+      const allPending = getPendingItems(parsedData);
+      const nonOtwItems = allPending.filter(item => (item.otw || 'no') !== 'yes');
+      if (nonOtwItems.length === 0) return;
+
+      const lines = textarea.value.split('\n');
+      nonOtwItems.forEach(item => {
+        const idx = item.lineIndex;
+        if (idx >= 0 && idx < lines.length) {
+          const raw = lines[idx];
+          if (raw.includes('|')) {
+            if (/otw\s*:\s*no/i.test(raw)) {
+              lines[idx] = raw.replace(/otw\s*:\s*no/i, 'OTW: yes');
+            } else if (!/otw\s*:/i.test(raw)) {
+              const pipePos = raw.indexOf('|');
+              const left = raw.substring(0, pipePos).trim();
+              const right = raw.substring(pipePos + 1).trim();
+              lines[idx] = `${left} | OTW: yes${right ? ', ' + right : ''}`;
+            }
+          } else {
+            lines[idx] = `${raw.trim()} | OTW: yes`;
+          }
+        }
+      });
+
+      applyTextValue(lines.join('\n'), true);
+    }
+
+    // Open Popup Window showing Pending foods for a specific category when clicking "(Xpts pending)"
+    function openCategoryPendingModal(mainSection, subSection) {
+      window._currentPendingModalContext = { main: mainSection, sub: subSection };
+      const parsedData = parseRawText(textarea.value);
+      const { foods: catalogFoods } = getMetaDataSection(parsedData);
+      const catalogLookup = {};
+      catalogFoods.forEach(f => {
+        catalogLookup[f.title.toLowerCase()] = f;
+      });
+
+      const allPending = getPendingItems(parsedData).map(p => enrichItemWithCatalog(p, catalogLookup));
+      const matching = allPending.filter(pItem =>
+        doesDirectoryStringMatch(pItem.directory, mainSection, subSection)
+      );
+
+      const totalPendingPts = matching.reduce((acc, item) => acc + (item.points || 0), 0);
+      document.getElementById('category-pending-modal-title').textContent = `${mainSection} › ${subSection} Pending`;
+      document.getElementById('category-pending-modal-subtitle').textContent = `${matching.length} pending item${matching.length === 1 ? '' : 's'} totaling ${formatPointsValue(totalPendingPts)}`;
+
+      const listEl = document.getElementById('category-pending-modal-list');
+      if (matching.length === 0) {
+        listEl.innerHTML = `<p class="text-sm text-slate-400 italic py-6 text-center">No pending foods in this category.</p>`;
+      } else {
+        listEl.innerHTML = matching.map(item => {
+          const isOtw = (item.otw || 'no') === 'yes';
+          return `
+            <div class="flex items-center justify-between gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/70">
+              <div class="flex items-center flex-wrap gap-2">
+                <span class="font-medium text-sm text-slate-900 dark:text-white">${escapeHtml(item.title)}</span>
+                <span class="px-2 py-0.5 rounded text-[11px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  ${escapeHtml(formatPointsValue(item.points || 0))}
+                </span>
+                <span class="px-2 py-0.5 rounded text-[11px] font-medium ${isOtw ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}">
+                  OTW: ${isOtw ? 'yes' : 'no'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onclick="removeItemAndLogHistory(${item.lineIndex}, '${escapeHtml(item.title.replace(/'/g, "\\'"))}')"
+                title="Remove from Pending & log to History"
+                class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('category-pending-modal').classList.remove('hidden');
+    }
+
+    function closeCategoryPendingModal() {
+      document.getElementById('category-pending-modal').classList.add('hidden');
+    }
+
+    // -------------------------------------------------------------
+    // 3B. ON THE WAY (OTW) MODAL WINDOW LOGIC
+    // -------------------------------------------------------------
+    let selectedOtwLineIndices = new Set();
+
+    function openOtwModal() {
+      selectedOtwLineIndices.clear();
+      renderOtwModalList();
+      document.getElementById('otw-modal').classList.remove('hidden');
+    }
+
+    function closeOtwModal() {
+      document.getElementById('otw-modal').classList.add('hidden');
+      selectedOtwLineIndices.clear();
+    }
+
+    function toggleOtwItemSelection(lineIndex) {
+      if (selectedOtwLineIndices.has(lineIndex)) {
+        selectedOtwLineIndices.delete(lineIndex);
+      } else {
+        selectedOtwLineIndices.add(lineIndex);
+      }
+      renderOtwModalList();
+    }
+
+    function resolveInventoryDestinationFromDirectory(dirString) {
+      if (!dirString || !dirString.trim()) {
+        return { main: 'Home Food', sub: 'Snacks' };
+      }
+      const firstToken = dirString.toLowerCase().split('/')[0].trim();
+      const isWork = firstToken.includes('w');
+      const isMeal = firstToken.includes('m');
+      return {
+        main: isWork ? 'Work Food' : 'Home Food',
+        sub: isMeal ? 'Meals' : 'Snacks'
+      };
+    }
+
+    function renderOtwModalList() {
+      const parsedData = parseRawText(textarea.value);
+      const { foods: catalogFoods } = getMetaDataSection(parsedData);
+      const catalogLookup = {};
+      catalogFoods.forEach(f => {
+        catalogLookup[f.title.toLowerCase()] = f;
+      });
+
+      const allPending = getPendingItems(parsedData).map(p => enrichItemWithCatalog(p, catalogLookup));
+      const otwItems = allPending.filter(item => (item.otw || 'no') === 'yes');
+
+      const listEl = document.getElementById('otw-modal-list');
+      const btnToPending = document.getElementById('btn-otw-to-pending');
+      const btnToInventory = document.getElementById('btn-otw-to-inventory');
+
+      const hasSelection = selectedOtwLineIndices.size > 0;
+      if (btnToPending) btnToPending.disabled = !hasSelection;
+      if (btnToInventory) btnToInventory.disabled = !hasSelection;
+
+      if (otwItems.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-center py-10 text-sm text-slate-400 italic">
+            No foods are currently marked On The Way.
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = otwItems.map(item => {
+        const isSelected = selectedOtwLineIndices.has(item.lineIndex);
+        return `
+          <div
+            onclick="toggleOtwItemSelection(${item.lineIndex})"
+            class="flex items-center justify-between gap-3 p-3.5 rounded-xl border cursor-pointer select-none transition-all ${
+              isSelected
+                ? 'bg-emerald-500/10 border-emerald-500 text-slate-900 dark:text-white shadow-sm'
+                : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/70 text-slate-700 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600'
+            }"
+          >
+            <div class="flex items-center gap-3 flex-wrap">
+              <div class="w-5 h-5 rounded-md flex items-center justify-center border transition-colors ${
+                isSelected
+                  ? 'bg-emerald-600 border-emerald-600 text-white'
+                  : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'
+              }">
+                ${isSelected ? `
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                  </svg>
+                ` : ''}
+              </div>
+              <span class="font-semibold text-sm">${escapeHtml(item.title)}</span>
+              ${item.points ? `
+                <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  ${escapeHtml(formatPointsValue(item.points))}
+                </span>
+              ` : ''}
+              ${item.directory ? `
+                <span class="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-200/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                  Dir: ${escapeHtml(item.directory)}
+                </span>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function sendSelectedOtwToNotOtw() {
+      if (selectedOtwLineIndices.size === 0) return;
+      const lines = textarea.value.split('\n');
+
+      selectedOtwLineIndices.forEach(idx => {
+        if (idx >= 0 && idx < lines.length) {
+          lines[idx] = lines[idx].replace(/otw\s*:\s*yes/i, 'OTW: no');
+        }
+      });
+
+      selectedOtwLineIndices.clear();
+      applyTextValue(lines.join('\n'), true);
+      renderOtwModalList();
+    }
+
+    function sendSelectedOtwToInventory() {
+      if (selectedOtwLineIndices.size === 0) return;
+
+      const parsedData = parseRawText(textarea.value);
+      const { foods: catalogFoods } = getMetaDataSection(parsedData);
+      const catalogLookup = {};
+      catalogFoods.forEach(f => {
+        catalogLookup[f.title.toLowerCase()] = f;
+      });
+
+      const allPending = getPendingItems(parsedData).map(p => enrichItemWithCatalog(p, catalogLookup));
+      const itemsToMove = allPending.filter(item => selectedOtwLineIndices.has(item.lineIndex));
+      if (itemsToMove.length === 0) return;
+
+      // Remove selected lines from Pending in descending lineIndex order so indices don't shift during removal
+      const lines = textarea.value.split('\n');
+      const sortedIndicesDesc = Array.from(selectedOtwLineIndices).sort((a, b) => b - a);
+      sortedIndicesDesc.forEach(idx => {
+        if (idx >= 0 && idx < lines.length) {
+          lines.splice(idx, 1);
+        }
+      });
+      textarea.value = lines.join('\n');
+
+      // Insert each moved food title into its target current inventory category
+      itemsToMove.forEach(item => {
+        const dest = resolveInventoryDestinationFromDirectory(item.directory);
+        insertLineIntoSection(dest.main, dest.sub, item.title, true);
+      });
+
+      selectedOtwLineIndices.clear();
+      pushHistoryState(textarea.value);
+      saveToLocalStorage();
+      renderAll();
+      renderOtwModalList();
+    }
+
+    // -------------------------------------------------------------
+    // 4. PURPLE "+" MODAL (Add Food to Meta Data -> Foods)
+    // -------------------------------------------------------------
+    function buildFormattedFoodLine() {
+      const title = document.getElementById('modal-title').value.trim() || 'Food Name';
+      const dir = document.getElementById('modal-dir').value.trim();
+      const pts = document.getElementById('modal-points').value.trim();
+      const link = document.getElementById('modal-link').value.trim();
+      const exp = document.getElementById('modal-exp').value.trim();
+      const desc = document.getElementById('modal-desc').value.trim();
+      const customRaw = document.getElementById('modal-custom-tags').value.trim();
+
+      const structuredParts = [];
+      if (pts) {
+        const formattedPts = formatPointsValue(parsePointsValue(pts));
+        structuredParts.push(`Points: ${formattedPts}`);
+      }
+      if (dir) structuredParts.push(`Directory: ${dir}`);
+      if (link) structuredParts.push(`link: ${link}`);
+      if (exp) structuredParts.push(`Estimated Expiration: ${exp}`);
+      if (desc) structuredParts.push(`Description: ${desc}`);
+
+      const customTags = customRaw
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean);
+
+      let rightSide = structuredParts.join(', ');
+      if (customTags.length > 0) {
+        rightSide += (rightSide ? ' ' : '') + `(${customTags.join(', ')})`;
+      }
+
+      return rightSide ? `${title} | ${rightSide}` : title;
+    }
+
+    function updateModalPreview() {
+      document.getElementById('modal-error').classList.add('hidden');
+      document.getElementById('modal-line-preview').textContent = buildFormattedFoodLine();
+    }
+
+    function openMetaFoodModal() {
+      document.getElementById('modal-title').value = '';
+      document.getElementById('modal-dir').value = '';
+      document.getElementById('modal-points').value = '';
+      document.getElementById('modal-link').value = '';
+      document.getElementById('modal-exp').value = '';
+      document.getElementById('modal-desc').value = '';
+      document.getElementById('modal-custom-tags').value = '';
+      document.getElementById('modal-error').classList.add('hidden');
+
+      updateModalPreview();
+      document.getElementById('meta-food-modal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('modal-title').focus(), 50);
+    }
+
+    function closeMetaFoodModal() {
+      document.getElementById('meta-food-modal').classList.add('hidden');
+    }
+
+    function insertFoodIntoMetaData() {
+      const title = document.getElementById('modal-title').value.trim();
+      if (!title) {
+        document.getElementById('modal-error').classList.remove('hidden');
+        document.getElementById('modal-title').focus();
+        return;
+      }
+
+      const newLine = buildFormattedFoodLine();
+      insertLineIntoSection('Meta Data', 'Foods', newLine);
+      closeMetaFoodModal();
+    }
+
+    // -------------------------------------------------------------
+    // 5. GREEN "+" MODAL (Staged Add to Pending + Modal Undo/Redo) & MOBILE DRAG
+    // -------------------------------------------------------------
+    let isDraggingGreenPlus = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let hoveredDropZone = null;
+    let autoScrollFrame = null;
+    let lastTouchClientY = null;
+
+    // Modal Staged Pending Items & Modal Undo/Redo History
+    let modalStagedHistory = [[]];
+    let modalStagedIndex = 0;
+
+    function getCurrentStagedItems() {
+      return modalStagedHistory[modalStagedIndex] || [];
+    }
+
+    function pushModalStagedState(newStagedArray) {
+      modalStagedHistory.splice(modalStagedIndex + 1);
+      modalStagedHistory.push(newStagedArray.map(item => ({ ...item })));
+      modalStagedIndex++;
+      updateModalUndoRedoButtons();
+      renderModalStagedBar();
+      renderCatalogOverviewList();
+    }
+
+    function modalPerformUndo() {
+      if (modalStagedIndex > 0) {
+        modalStagedIndex--;
+        updateModalUndoRedoButtons();
+        renderModalStagedBar();
+        renderCatalogOverviewList();
+      }
+    }
+
+    function modalPerformRedo() {
+      if (modalStagedIndex < modalStagedHistory.length - 1) {
+        modalStagedIndex++;
+        updateModalUndoRedoButtons();
+        renderModalStagedBar();
+        renderCatalogOverviewList();
+      }
+    }
+
+    function updateModalUndoRedoButtons() {
+      const undoBtn = document.getElementById('btn-modal-undo');
+      const redoBtn = document.getElementById('btn-modal-redo');
+      if (undoBtn) undoBtn.disabled = modalStagedIndex <= 0;
+      if (redoBtn) redoBtn.disabled = modalStagedIndex >= modalStagedHistory.length - 1;
+    }
+
+    function startGreenPlusDrag(e) {
+      const point = e.touches ? e.touches[0] : e;
+      dragStartX = point.clientX;
+      dragStartY = point.clientY;
+      lastTouchClientY = point.clientY;
+      isDraggingGreenPlus = false;
+      hoveredDropZone = null;
+
+      function runAutoScroll() {
+        if (!isDraggingGreenPlus || lastTouchClientY === null) return;
+        const edgeThreshold = 75;
+        const maxSpeed = 12;
+        if (lastTouchClientY > window.innerHeight - edgeThreshold) {
+          const ratio = Math.min(1, (lastTouchClientY - (window.innerHeight - edgeThreshold)) / edgeThreshold);
+          window.scrollBy(0, Math.ceil(maxSpeed * ratio));
+        } else if (lastTouchClientY < edgeThreshold) {
+          const ratio = Math.min(1, (edgeThreshold - lastTouchClientY) / edgeThreshold);
+          window.scrollBy(0, -Math.ceil(maxSpeed * ratio));
+        }
+        autoScrollFrame = requestAnimationFrame(runAutoScroll);
+      }
+
+      function onMove(moveEvent) {
+        const pt = (moveEvent.touches && moveEvent.touches[0]) || (moveEvent.changedTouches && moveEvent.changedTouches[0]) || moveEvent;
+        const dx = pt.clientX - dragStartX;
+        const dy = pt.clientY - dragStartY;
+        lastTouchClientY = pt.clientY;
+
+        if (!isDraggingGreenPlus && Math.hypot(dx, dy) > 6) {
+          isDraggingGreenPlus = true;
+          document.getElementById('green-plus-drag-ghost').classList.remove('hidden');
+          document.querySelectorAll('.drop-category-zone').forEach(z => {
+            z.classList.add('border-dashed', 'border-emerald-500/40', 'bg-emerald-500/5');
+          });
+          if (!autoScrollFrame) {
+            autoScrollFrame = requestAnimationFrame(runAutoScroll);
+          }
+        }
+
+        if (isDraggingGreenPlus) {
+          if (moveEvent.cancelable) moveEvent.preventDefault();
+          const ghost = document.getElementById('green-plus-drag-ghost');
+          ghost.style.left = pt.clientX + 'px';
+          ghost.style.top = pt.clientY + 'px';
+
+          const elUnder = document.elementFromPoint(pt.clientX, pt.clientY);
+          const zone = elUnder ? elUnder.closest('.drop-category-zone') : null;
+
+          document.querySelectorAll('.drop-category-zone').forEach(z => {
+            if (z === zone) {
+              z.classList.remove('border-emerald-500/40', 'bg-emerald-500/5');
+              z.classList.add('border-emerald-500', 'bg-emerald-500/15');
+            } else {
+              z.classList.remove('border-emerald-500', 'bg-emerald-500/15');
+              z.classList.add('border-emerald-500/40', 'bg-emerald-500/5');
+            }
+          });
+
+          hoveredDropZone = zone;
+          const ghostLabel = document.getElementById('drag-ghost-label');
+          if (zone) {
+            const m = zone.getAttribute('data-drop-main');
+            const s = zone.getAttribute('data-drop-sub');
+            ghostLabel.textContent = `Add to ${m} › ${s}`;
+          } else {
+            ghostLabel.textContent = 'Drop on a category';
+          }
+        }
+      }
+
+      function onEnd() {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onEnd);
+        window.removeEventListener('touchmove', onMove);
+        window.removeEventListener('touchend', onEnd);
+        window.removeEventListener('touchcancel', onEnd);
+
+        if (autoScrollFrame) {
+          cancelAnimationFrame(autoScrollFrame);
+          autoScrollFrame = null;
+        }
+        lastTouchClientY = null;
+
+        document.getElementById('green-plus-drag-ghost').classList.add('hidden');
+        document.querySelectorAll('.drop-category-zone').forEach(z => {
+          z.classList.remove('border-dashed', 'border-emerald-500/40', 'bg-emerald-500/5', 'border-emerald-500', 'bg-emerald-500/15');
+        });
+
+        if (isDraggingGreenPlus) {
+          if (hoveredDropZone) {
+            const targetMain = hoveredDropZone.getAttribute('data-drop-main');
+            const targetSub = hoveredDropZone.getAttribute('data-drop-sub');
+            openInventoryCatalogModal(targetMain, targetSub);
+          }
+          isDraggingGreenPlus = false;
+          hoveredDropZone = null;
+        } else {
+          openInventoryCatalogModal();
+        }
+      }
+
+      window.addEventListener('mousemove', onMove, { passive: false });
+      window.addEventListener('mouseup', onEnd);
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', onEnd);
+      window.addEventListener('touchcancel', onEnd);
+    }
+
+    function rememberCatalogDropdowns(mainVal, subVal) {
+      if (mainVal) {
+        lastSelectedMain = mainVal;
+        try { localStorage.setItem(STORAGE_KEY_LAST_MAIN, mainVal); } catch (e) {}
+      }
+      if (subVal) {
+        lastSelectedSub = subVal;
+        try { localStorage.setItem(STORAGE_KEY_LAST_SUB, subVal); } catch (e) {}
+      }
+    }
+
+    function onCatalogDropdownChange() {
+      const mainSelect = document.getElementById('catalog-target-main');
+      const subSelect = document.getElementById('catalog-target-sub');
+      rememberCatalogDropdowns(mainSelect.value, subSelect.value);
+      renderCatalogOverviewList();
+    }
+
+    function openInventoryCatalogModal(preselectMain, preselectSub) {
+      const parsed = parseRawText(textarea.value);
+      const mainSelect = document.getElementById('catalog-target-main');
+      const subSelect = document.getElementById('catalog-target-sub');
+
+      const mainOptions = new Set(
+        ['Work Food', 'Home Food', ...Object.keys(parsed)].filter(
+          k => k.toLowerCase() !== 'meta data' && k.toLowerCase() !== 'pending'
+        )
+      );
+      mainSelect.innerHTML = Array.from(mainOptions)
+        .map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`)
+        .join('');
+
+      const subOptions = new Set(['Snacks', 'Meals']);
+      Object.entries(parsed).forEach(([mainKey, subMap]) => {
+        if (mainKey.toLowerCase() !== 'meta data' && mainKey.toLowerCase() !== 'pending') {
+          Object.keys(subMap).filter(s => s !== '_direct').forEach(s => subOptions.add(s));
+        }
+      });
+      subSelect.innerHTML = Array.from(subOptions)
+        .map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`)
+        .join('');
+
+      const chosenMain = preselectMain || lastSelectedMain;
+      const chosenSub = preselectSub || lastSelectedSub;
+
+      if (chosenMain && Array.from(mainOptions).includes(chosenMain)) {
+        mainSelect.value = chosenMain;
+      }
+      if (chosenSub && Array.from(subOptions).includes(chosenSub)) {
+        subSelect.value = chosenSub;
+      }
+
+      rememberCatalogDropdowns(mainSelect.value, subSelect.value);
+
+      // Reset modal staging & undo history
+      modalStagedHistory = [[]];
+      modalStagedIndex = 0;
+      updateModalUndoRedoButtons();
+      renderModalStagedBar();
+
+      document.getElementById('catalog-search').value = '';
+      renderCatalogOverviewList();
+      document.getElementById('inventory-catalog-modal').classList.remove('hidden');
+    }
+
+    function cancelInventoryCatalogModal() {
+      document.getElementById('inventory-catalog-modal').classList.add('hidden');
+    }
+
+    // Commit staged items into the Pending section only when clicking Done
+    function commitInventoryCatalogModal() {
+      const staged = getCurrentStagedItems();
+      if (staged.length > 0) {
+        staged.forEach(entry => {
+          const line = `${entry.title} | Directory: ${entry.dirCode}, OTW: no`;
+          insertLineIntoMainSectionDirect('Pending', line);
+        });
+        pushHistoryState(textarea.value);
+        saveToLocalStorage();
+        renderAll();
+      }
+      document.getElementById('inventory-catalog-modal').classList.add('hidden');
+    }
+
+    function stageFoodForPending(filteredIndex) {
+      const list = window._currentCatalogFiltered || [];
+      const item = list[filteredIndex];
+      if (!item) return;
+
+      const targetMain = document.getElementById('catalog-target-main').value;
+      const targetSub = document.getElementById('catalog-target-sub').value;
+      const { fullCode } = getDirectoryCodes(targetMain, targetSub);
+
+      const nextStaged = [
+        ...getCurrentStagedItems(),
+        {
+          id: Date.now() + Math.random(),
+          title: item.title,
+          dirCode: fullCode,
+          targetMain,
+          targetSub
+        }
+      ];
+      pushModalStagedState(nextStaged);
+    }
+
+    function removeStagedFoodByIndex(stagedIdx) {
+      const current = getCurrentStagedItems();
+      if (stagedIdx < 0 || stagedIdx >= current.length) return;
+      const nextStaged = current.filter((_, i) => i !== stagedIdx);
+      pushModalStagedState(nextStaged);
+    }
+
+    function renderModalStagedBar() {
+      const staged = getCurrentStagedItems();
+      const container = document.getElementById('catalog-staged-container');
+      const countEl = document.getElementById('catalog-staged-count');
+      const pillsEl = document.getElementById('catalog-staged-pills');
+
+      countEl.textContent = String(staged.length);
+      if (staged.length === 0) {
+        container.classList.add('hidden');
+        pillsEl.innerHTML = '';
+        return;
+      }
+
+      container.classList.remove('hidden');
+      pillsEl.innerHTML = staged.map((s, idx) => `
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-emerald-500/40 shadow-sm">
+          <span>${escapeHtml(s.title)}</span>
+          <span class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 uppercase">(${escapeHtml(s.dirCode)})</span>
+          <button
+            type="button"
+            onclick="removeStagedFoodByIndex(${idx})"
+            title="Remove this item"
+            class="ml-0.5 text-slate-400 hover:text-rose-500 font-bold leading-none px-1 py-0.5 rounded hover:bg-rose-500/10 transition-colors"
+          >
+            &times;
+          </button>
+        </span>
+      `).join('');
+    }
+
+    function renderCatalogOverviewList() {
+      const listEl = document.getElementById('catalog-foods-list');
+      const query = (document.getElementById('catalog-search').value || '').trim().toLowerCase();
+      const targetMain = document.getElementById('catalog-target-main').value;
+      const targetSub = document.getElementById('catalog-target-sub').value;
+      const { fullCode } = getDirectoryCodes(targetMain, targetSub);
+
+      const dirBadge = document.getElementById('catalog-dir-badge');
+      if (dirBadge) {
+        dirBadge.textContent = `Directory: ${fullCode}`;
+      }
+
+      const parsed = parseRawText(textarea.value);
+      const { foods } = getMetaDataSection(parsed);
+
+      if (!foods || foods.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-center py-12 px-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-sm">
+            No foods found in <span class="font-mono">Meta Data &rsaquo; = = = Foods = = =</span> yet.<br>
+            Use the purple <strong>+</strong> button on the Text Data tab to add foods to your catalog!
+          </div>
+        `;
+        return;
+      }
+
+      // Filter by Directory tag matching the chosen targetMain & targetSub, plus optional search query
+      const filtered = foods.filter(item => {
+        if (!doesFoodMatchDirectory(item, targetMain, targetSub)) return false;
+        if (!query) return true;
+        const haystack = [
+          item.title,
+          item.directory || '',
+          item.description || '',
+          item.expiration || '',
+          ...(item.customTags || [])
+        ].join(' ').toLowerCase();
+        return haystack.includes(query);
+      });
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-center py-10 text-slate-400 text-sm">
+            No foods in <span class="font-mono">= = = Foods = = =</span> match <strong>Directory: ${escapeHtml(fullCode)}</strong>${query ? ' and your search filter' : ''}.
+          </div>
+        `;
+        return;
+      }
+
+      const staged = getCurrentStagedItems();
+
+      listEl.innerHTML = filtered.map((item, idx) => {
+        // Find indices in `staged` for this item so we can render inline "x" buttons right after the item as well
+        const matchingStagedIndices = [];
+        staged.forEach((s, sIdx) => {
+          if (s.title.toLowerCase() === item.title.toLowerCase() && s.dirCode === fullCode) {
+            matchingStagedIndices.push(sIdx);
+          }
+        });
+
+        const href = formatUrl(item.link);
+        const boxClickAttr = href
+          ? `onclick="window.open('${escapeHtml(href.replace(/'/g, "\\'"))}', '_blank', 'noopener,noreferrer')"`
+          : '';
+
+        return `
+          <div
+            ${boxClickAttr}
+            title="${href ? `Click box to open ${escapeHtml(item.link)}` : escapeHtml(item.title)}"
+            class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all shadow-sm ${href ? 'cursor-pointer' : ''}"
+          >
+            <div class="flex items-center flex-wrap gap-2 min-w-0">
+              <h4 class="font-semibold text-slate-900 dark:text-white text-sm">${escapeHtml(item.title)}</h4>
+              ${item.points !== null && item.points !== undefined ? `
+                <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  ${escapeHtml(formatPointsValue(item.points))}
+                </span>
+              ` : ''}
+              ${item.directory ? `
+                <span class="px-2 py-0.5 rounded-md text-[11px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                  Dir: ${escapeHtml(item.directory)}
+                </span>
+              ` : ''}
+              ${matchingStagedIndices.map((sIdx, countIdx) => `
+                <span
+                  onclick="event.stopPropagation();"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                >
+                  +${countIdx + 1}
+                  <button
+                    type="button"
+                    onclick="event.stopPropagation(); removeStagedFoodByIndex(${sIdx})"
+                    title="Remove staged item"
+                    class="hover:text-rose-500 font-bold pl-0.5"
+                  >&times;</button>
+                </span>
+              `).join('')}
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onclick="event.stopPropagation(); stageFoodForPending(${idx})"
+                title="Add to Pending"
+                class="w-8 h-8 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-all flex items-center justify-center"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+              ${matchingStagedIndices.length > 0 ? `
+                <button
+                  type="button"
+                  onclick="event.stopPropagation(); removeStagedFoodByIndex(${matchingStagedIndices[matchingStagedIndices.length - 1]})"
+                  title="Remove from staged Pending list"
+                  class="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 transition-all"
+                >
+                  &times;
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Store current filtered list for button index lookup
+      window._currentCatalogFiltered = filtered;
+    }
+
+    // -------------------------------------------------------------
+    // 6. UI CONTROLS (TABS, THEME, FORMATTING GUIDE, SHORTCUTS)
+    // -------------------------------------------------------------
+    function switchTab(tab) {
+      activeTab = tab;
+      const viewData = document.getElementById('view-data');
+      const viewVisual = document.getElementById('view-visual');
+      const tabDataBtn = document.getElementById('tab-data');
+      const tabVisualBtn = document.getElementById('tab-visual');
+      const btnPlusData = document.getElementById('btn-plus-data');
+      const btnPlusVisual = document.getElementById('btn-plus-visual');
+
+      if (tab === 'data') {
+        viewData.classList.remove('hidden');
+        viewVisual.classList.add('hidden');
+
+        btnPlusData.classList.remove('hidden');
+        btnPlusVisual.classList.add('hidden');
+
+        tabDataBtn.className = 'px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-sm whitespace-nowrap';
+        tabVisualBtn.className = 'px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 whitespace-nowrap';
+      } else {
+        renderAll();
+        viewData.classList.add('hidden');
+        viewVisual.classList.remove('hidden');
+
+        btnPlusData.classList.add('hidden');
+        btnPlusVisual.classList.remove('hidden');
+
+        tabVisualBtn.className = 'px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm whitespace-nowrap';
+        tabDataBtn.className = 'px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 whitespace-nowrap';
+      }
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      try {
+        localStorage.setItem(STORAGE_KEY_THEME, isDark ? 'dark' : 'light');
+      } catch (e) {}
+    }
+
+    function toggleGuide() {
+      const content = document.getElementById('guide-content');
+      const chevron = document.getElementById('guide-chevron');
+      content.classList.toggle('hidden');
+      chevron.classList.toggle('rotate-180');
+    }
+
+    // Enable horizontal mouse-wheel scrolling on the custom top-bar buttons container
+    const dynamicButtonsContainer = document.getElementById('dynamic-buttons-container');
+    if (dynamicButtonsContainer) {
+      dynamicButtonsContainer.addEventListener('wheel', (e) => {
+        if (e.deltaY !== 0) {
+          e.preventDefault();
+          dynamicButtonsContainer.scrollLeft += e.deltaY;
+        }
+      }, { passive: false });
+    }
+
+    // Global keyboard shortcuts for Tab toggle, Undo (Ctrl+Z / Cmd+Z), Redo (Ctrl+Y / Ctrl+Shift+Z), and Escape
+    window.addEventListener('keydown', (e) => {
+      const isCatalogModalOpen = !document.getElementById('inventory-catalog-modal').classList.contains('hidden');
+      const isMetaModalOpen = !document.getElementById('meta-food-modal').classList.contains('hidden');
+      const isPasteModalOpen = !document.getElementById('paste-all-modal').classList.contains('hidden');
+      const isCategoryPendingModalOpen = !document.getElementById('category-pending-modal').classList.contains('hidden');
+      const isOtwModalOpen = !document.getElementById('otw-modal').classList.contains('hidden');
+      const anyModalOpen = isCatalogModalOpen || isMetaModalOpen || isPasteModalOpen || isCategoryPendingModalOpen || isOtwModalOpen;
+
+      if (e.key === 'Escape') {
+        closeMetaFoodModal();
+        cancelInventoryCatalogModal();
+        closePasteModal();
+        closeCategoryPendingModal();
+        closeOtwModal();
+        return;
+      }
+
+      // Press "Tab" to toggle which tab we are on
+      if (e.key === 'Tab' && !anyModalOpen) {
+        e.preventDefault();
+        switchTab(activeTab === 'data' ? 'visual' : 'data');
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+        const key = e.key.toLowerCase();
+        if (key === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          if (isCatalogModalOpen) {
+            modalPerformUndo();
+          } else {
+            performUndo();
+          }
+        } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+          e.preventDefault();
+          if (isCatalogModalOpen) {
+            modalPerformRedo();
+          } else {
+            performRedo();
+          }
+        }
+      }
+    });
+
+    // Initial render
+    updateUndoRedoButtons();
+    renderAll();
+  </script>
+</body>
+</html>
